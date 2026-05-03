@@ -4,7 +4,6 @@ from PIL import ImageTk, Image
 
 from scissors.feature_extraction import Scissors
 
-
 class Model:
     def __init__(self, canvas):
         self.canvas = canvas
@@ -99,7 +98,7 @@ class PolyView(View):
 
 
 class GuiManager:
-    def __init__(self, canvas, scissors):
+    def __init__(self, canvas, scissors, root):
         self.canvas = canvas
         self.scissors = scissors
 
@@ -114,6 +113,8 @@ class GuiManager:
         self.c = PolyController(self.poly_model)
         self.prev_click = None
         self.cur_click = None
+        self.first_click = None
+        self.paths = []
 
     def on_click(self, e):
         self.prev_click = self.cur_click
@@ -126,12 +127,29 @@ class GuiManager:
 
             path = self.scissors.find_path(seed_x, seed_y, free_x, free_y)
             path = [np.flip(x) for x in path]
+            self.paths.append(path)
 
             self.pixel_model.add_pixels(path)
             new_circle_coords = path[0]
+        else:
+            self.first_click = (e.y, e.x)
 
         self.c.on_click(*new_circle_coords)
+    
+    def get_path(self, e):
+        self.prev_click = self.cur_click
+        self.cur_click = self.first_click
 
+        if self.prev_click is not None:
+            seed_y, seed_x = self.prev_click
+            free_y, free_x = self.cur_click
+
+            path = self.scissors.find_path(seed_x, seed_y, free_x, free_y)
+            path = [np.flip(x) for x in path]
+            self.paths.append(path)
+
+            self.pixel_model.add_pixels(path)
+        self.root.destroy()
 
 def run_demo(file_name):
     image_pil = Image.open(file_name)
@@ -144,9 +162,31 @@ def run_demo(file_name):
     tk_image = ImageTk.PhotoImage(image_pil)
     stage.create_image(0, 0, image=tk_image, anchor=NW)
 
-    manager = GuiManager(stage, scissors)
-    stage.bind('<Button-1>', manager.on_click)
+    manager = GuiManager(stage, scissors, root)
+    stage.bind('<Button-3>', manager.on_click)
 
     stage.pack(expand=YES, fill=BOTH)
     root.resizable(False, False)
     root.mainloop()
+
+
+
+def get_segment_path(file_name):
+    image_pil = Image.open(file_name)
+    w, h = image_pil.size
+
+    scissors = Scissors(np.asarray(image_pil))
+
+    root = Tk()
+    stage = Canvas(root, bg="black", width=w, height=h)
+    tk_image = ImageTk.PhotoImage(image_pil)
+    stage.create_image(0, 0, image=tk_image, anchor=NW)
+
+    manager = GuiManager(stage, scissors, root)
+    stage.bind('<Button-1>', manager.on_click)
+    stage.bind('<Button-3>', manager.get_path)
+
+    stage.pack(expand=YES, fill=BOTH)
+    root.resizable(False, False)
+    root.mainloop()
+    return manager.paths
