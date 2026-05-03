@@ -115,6 +115,7 @@ class GuiManager:
         self.cur_click = None
         self.first_click = None
         self.paths = []
+        self.root = root
 
     def on_click(self, e):
         self.prev_click = self.cur_click
@@ -127,7 +128,7 @@ class GuiManager:
 
             path = self.scissors.find_path(seed_x, seed_y, free_x, free_y)
             path = [np.flip(x) for x in path]
-            self.paths.append(path)
+            self.paths.extend(path)
 
             self.pixel_model.add_pixels(path)
             new_circle_coords = path[0]
@@ -146,7 +147,7 @@ class GuiManager:
 
             path = self.scissors.find_path(seed_x, seed_y, free_x, free_y)
             path = [np.flip(x) for x in path]
-            self.paths.append(path)
+            self.paths.extend(path)
 
             self.pixel_model.add_pixels(path)
         self.root.destroy()
