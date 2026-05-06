@@ -114,7 +114,8 @@ class GuiManager:
         self.prev_click = None
         self.cur_click = None
         self.first_click = None
-        self.paths = []
+        self.segment_path = []
+        self.segment_paths = []
         self.root = root
 
     def on_click(self, e):
@@ -128,7 +129,7 @@ class GuiManager:
 
             path = self.scissors.find_path(seed_x, seed_y, free_x, free_y)
             path = [np.flip(x) for x in path]
-            self.paths.extend(path)
+            self.segment_path.extend(path)
 
             self.pixel_model.add_pixels(path)
             new_circle_coords = path[0]
@@ -147,9 +148,29 @@ class GuiManager:
 
             path = self.scissors.find_path(seed_x, seed_y, free_x, free_y)
             path = [np.flip(x) for x in path]
-            self.paths.extend(path)
+            self.segment_path.extend(path)
+            self.segment_paths.append(self.segment_path.copy())
+            self.prev_click = None
+            self.cur_click = None
+            self.first_click = None
+            self.segment_path = []
 
             self.pixel_model.add_pixels(path)
+
+    def get_paths(self, event=None):
+        self.prev_click = self.cur_click
+        self.cur_click = self.first_click
+        if self.prev_click is not None:
+            seed_y, seed_x = self.prev_click
+            free_y, free_x = self.cur_click
+
+            path = self.scissors.find_path(seed_x, seed_y, free_x, free_y)
+            path = [np.flip(x) for x in path]
+            self.segment_path.extend(path)
+            self.segment_paths.append(self.segment_path.copy())
+
+            self.pixel_model.add_pixels(path)
+        
         self.root.destroy()
 
 def run_demo(file_name):
@@ -186,8 +207,9 @@ def get_segment_path(file_name):
     manager = GuiManager(stage, scissors, root)
     stage.bind('<Button-1>', manager.on_click)
     stage.bind('<Button-3>', manager.get_path)
+    root.bind("<Return>", manager.get_paths)
 
     stage.pack(expand=YES, fill=BOTH)
     root.resizable(False, False)
     root.mainloop()
-    return manager.paths
+    return manager.segment_paths
